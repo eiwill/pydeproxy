@@ -49,15 +49,22 @@ class TestEchoHandler(unittest.TestCase):
         self.deproxy.shutdown_all_endpoints()
 
     def test_echo_handler(self):
+
+        methods = ["GET", "PUT", "POST", "DELETE", "HEAD", "OPTIONS", "PATCH"]
         headers = {'x-header': '12345'}
-        mc = self.deproxy.make_request('http://localhost:%i/' %
-                                       self.deproxy_port, headers=headers,
-                                       request_body='this is the body',
-                                       default_handler=deproxy.echo_handler)
-        self.assertEquals(int(mc.received_response.code), 200)
-        self.assertIn('x-header', mc.received_response.headers)
-        self.assertEquals(mc.received_response.headers['x-header'], '12345')
-        self.assertEquals(mc.received_response.body, 'this is the body')
+
+        for method in methods:
+            mc = self.deproxy.make_request('http://localhost:%i/' %
+                                           self.deproxy_port, headers=headers,
+                                           request_body='this is the body',
+                                           default_handler=deproxy.echo_handler,
+                                           method=method)
+            self.assertEquals(int(mc.received_response.code), 200)
+            self.assertIn('x-header', mc.received_response.headers)
+            self.assertEquals(mc.received_response.headers['x-header'], '12345')
+
+            expected_body = "" if method == "HEAD" else 'this is the body'
+            self.assertEquals(mc.received_response.body, expected_body)
 
 
 class TestDelayHandler(unittest.TestCase):
@@ -215,7 +222,7 @@ class TestOrphanedHandlings(unittest.TestCase):
         self.deproxy.shutdown_all_endpoints()
 
     def test_orphaned_handling(self):
-        delayed_handler = deproxy.delay(2, deproxy.simple_handler)
+        delayed_handler = deproxy.delay(4, deproxy.simple_handler)
         self.long_running_mc = None
 
         class Helper:
